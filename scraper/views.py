@@ -100,22 +100,26 @@ def scraper(query_params):
             UserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'
             mod_headers = {'referer': my_referer, 'User-Agent':UserAgent}
             # Start Scrpaing
-            for apn in query_params['apns']:
-                params['where'] = "HCAD_NUM = '" + apn + "'"
-                #hit Server
-                response = requests.get(url, params=params, headers=mod_headers)#, verify=False)
-                print(url+"?"+urllib.parse.urlencode(params))
-                if response.ok:
+            params['where'] = "HCAD_NUM IN ('" + "','".join(query_params['apns']) + "')"
+            response = requests.get(url, params=params, headers=mod_headers)#, verify=False)
+            print(url+"?"+urllib.parse.urlencode(params))
+            if response.ok:
+                features = response.json()['features']
+                response = {}
+                for feature in features:
+                    attributes = feature['attributes']
+                    response[attributes['HCAD_NUM']] = attributes
+                for apn in query_params['apns']:
+                    #hit Server
                     row = {}
                     try:
                         #Try to Save Response
                         row['HCad No'] = apn
-                        attributes = response.json()['features'][0]['attributes']
-                        row['OWNER NAME'] = attributes['owner']
-                        row['Mail Street Adress'] = attributes['address']
-                        row['Mail City'] = attributes['city']
+                        row['OWNER NAME'] = response[apn]['owner']
+                        row['Mail Street Adress'] = response[apn]['address']
+                        row['Mail City'] = response[apn]['city']
                         row['Mail State'] = 'TX'
-                        row['Mail Zip Code'] = attributes['zip']
+                        row['Mail Zip Code'] = response[apn]['zip']
                     except Exception as e:
                         row['Error'] = 'No Data Found for this APN'
                         print(e)
